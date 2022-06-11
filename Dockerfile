@@ -90,6 +90,10 @@ COPY ./index.html /var/www/player/html/index.html
 COPY docker-entrypoint.sh /
 RUN chown nginx:nginx /docker-entrypoint.sh
 RUN chmod 777 /docker-entrypoint.sh
+COPY .env /.env
+RUN chown nginx:nginx /.env
+RUN chmod 777 /.env
+
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
 CMD ["nginx", "-g", "daemon off;"]
 
