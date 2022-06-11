@@ -1,0 +1,136 @@
+user nginx nginx;
+error_log /var/log/nginx/debug.logs debug;
+events {}
+
+http {
+    sendfile off;
+    tcp_nopush on;
+    directio 512;
+    default_type application/octet-stream;
+	# always redirect to https
+	server {
+		listen 80 default_server;
+
+		server_name ${DOMAIN};
+
+		return 302 https://$host$request_uri;
+	}
+    server {
+        listen       8080;
+        server_name  localhost;
+
+	location /publish {
+	    proxy_buffering off;
+		proxy_buffer_size 16k;
+		proxy_set_header Host $proxy_host;
+		proxy_busy_buffers_size 24k;
+		proxy_buffers 64 4k;
+	        proxy_ssl_server_name on;
+		proxy_ssl_name $proxy_host;
+	    proxy_set_header X-Real-IP $remote_addr;
+	    proxy_pass ${PUBLISH};
+         }
+	location /done {
+	    proxy_buffering off;
+		proxy_buffer_size 16k;
+		proxy_set_header Host $proxy_host;
+		proxy_busy_buffers_size 24k;
+		proxy_buffers 64 4k;
+	        proxy_ssl_server_name on;
+		proxy_ssl_name $proxy_host;
+	    proxy_set_header X-Real-IP $remote_addr;
+	    proxy_pass ${DONE};
+         }
+    }
+
+
+    server {
+        listen 443 ssl;
+        # use the certificates
+        ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+        server_name ${DOMAIN};
+
+
+        location /thumbnails/ {
+	    add_header Access-Control-Allow-Origin *;
+            root /var;
+        }
+
+        location /control {
+            rtmp_control all;
+        }
+
+        location /live {
+            flv_live on;
+	    add_header Access-Control-Allow-Origin *;
+            chunked_transfer_encoding on;
+        }
+        location ~ /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+	location /hls/ {
+		    # Disable cach
+		    add_header 'Cache-Control' 'no-cache';
+
+		    # CORS setup
+		    add_header 'Access-Control-Allow-Origin' '*' always;
+		    add_header 'Access-Control-Expose-Headers' 'Content-Length';
+
+		    # allow CORS preflight requests
+		    if ($request_method = 'OPTIONS') {
+			add_header 'Access-Control-Allow-Origin' '*';
+			add_header 'Access-Control-Max-Age' 1728000;
+			add_header 'Content-Type' 'text/plain charset=UTF-8';
+			add_header 'Content-Length' 0;
+			return 204;
+		    }
+
+		    types {
+			application/dash+xml mpd;
+			application/vnd.apple.mpegurl m3u8;
+			video/mp2t ts;
+		    }
+
+		    root /var/;
+		}
+	location / {
+	    root /var/www/player/html;
+	    index index.html;
+	    try_files $uri $uri/ /index.html;
+	}
+   }
+}
+
+
+rtmp {
+    server {
+        listen 1935;
+        listen [::]:1935 ipv6only=on;
+        drop_idle_publisher 10s;
+
+        application live {
+            live on;
+	    record off;
+	    hls on;
+            hls_path /var/hls/;
+            hls_fragment 2s;
+            hls_playlist_length 10s;
+
+            on_done http://localhost:8080/done;
+            on_publish http://localhost:8080/publish;
+
+            exec_publish_done rm -f /tmp/thumbnail_recordings/$name.flv /var/thumbnails/$name.png;
+
+            recorder preview {
+                record keyframes;
+                record_max_frames 4;
+                record_path /tmp/thumbnail_recordings;
+                record_interval 2s;
+
+                exec_record_done ffmpeg -i $path -r 1/1 -s 320x240 -y /var/thumbnails/$name.png;
+
+            }
+        }
+    }
+}

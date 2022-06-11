@@ -1,0 +1,18 @@
+<body style="background-color: black">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flv.js/1.5.0/flv.min.js"></script>
+<video id="videoElement" width="100%" height="auto" controls ></video>
+<script>
+    if (flvjs.isSupported()) {
+        var urlParams = new URLSearchParams(window.location.search);
+        var videoElement = document.getElementById('videoElement');
+        var flvPlayer = flvjs.createPlayer({
+            type: 'flv',
+	    isLive: 'true',
+	    url: `https://us.popola.dev/live?port=1935&app=live&stream=${urlParams.get('watch')}`
+	}, {showControls: 'true'});
+        flvPlayer.attachMediaElement(videoElement);
+	flvPlayer.load();
+	flvPlayer.pause();
+    }
+</script>
+</body>
