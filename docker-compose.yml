@@ -17,15 +17,15 @@ services:
         image: certbot/certbot
         container_name: certbot
         volumes:
-            - ./certbot/conf:/etc/letsencrypt:rw
-            - ./certbot/www:/var/www/certbot:rw
+            - ./certbot/www/:/var/www/certbot/:rw
+            - ./certbot/conf/:/etc/letsencrypt/:rw
         command: "certonly --webroot -w /var/www/certbot --force-renewal --email ${EMAIL} -d ${DOMAIN} --agree-tos"
     getcert:
         image: nginx:latest
         volumes:
-            - cert.conf:/etc/nginx/nginx.conf:ro
-            - ./certbot/conf:/etc/letsencrypt:rw
-            - ./certbot/www:/var/www/certbot:rw
+            - ./cert.conf:/etc/nginx/nginx.conf:ro
+            - ./certbot/conf:/etc/letsencrypt:ro
+            - ./certbot/www:/var/www/certbot:ro
         ports:
             - "80:80"
             - "443:443"
