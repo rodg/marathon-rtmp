@@ -76,7 +76,7 @@ EXPOSE 1935
 COPY --from=builder /tmp/build/nginx /usr/local/sbin/nginx
 RUN chmod 550 /usr/local/sbin/nginx
 
-COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY templates/nginx.conf.template /etc/nginx/nginx.conf.template
 
 RUN mkdir -p /var/thumbnails /tmp/thumbnail_recordings && \
     chown -R nginx:nginx /var/thumbnails && \
