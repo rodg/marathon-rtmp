@@ -2,6 +2,5 @@ logs
 syslogs
 certbot
 .env
-nginx.conf
 pcre-8.45.tar.gz
 cert.conf
